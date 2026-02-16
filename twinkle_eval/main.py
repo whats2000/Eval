@@ -258,16 +258,24 @@ class TwinkleEvalRunner:
             "average_std": dataset_avg_std,
         }
 
-    def run_evaluation(self, export_formats: Optional[List[str]] = None) -> str:
+    def run_evaluation(
+        self,
+        export_formats: Optional[List[str]] = None,
+        hf_repo_id: Optional[str] = None,
+        hf_variant: Optional[str] = None,
+    ) -> str:
         """執行完整的評測流程
 
         這是主要的評測入口點，包含以下步驟：
         1. 建立評測器
         2. 對所有資料集進行評測
         3. 統計和輸出結果
+        4. 上傳結果至 Hugging Face (如果有指定)
 
         Args:
             export_formats: 輸出格式清單，預設為 ["json"]
+            hf_repo_id: Hugging Face dataset repo ID (此參數為選用)
+            hf_variant: Variant name for the results (此參數為選用)
 
         Returns:
             str: 主要結果檔案路徑
@@ -323,6 +331,24 @@ class TwinkleEvalRunner:
 
         # Google 服務整合
         self._handle_google_services(final_results, export_formats)
+
+        if hf_repo_id:
+            try:
+                from .hf_uploader import upload_results
+
+                # Model name from config
+                model_name = self.config.get("model", {}).get("name", "unknown_model")
+
+                upload_results(
+                    repo_id=hf_repo_id,
+                    variant=hf_variant,
+                    model_name=model_name,
+                    results_dir=self.results_dir,
+                    timestamp=self.start_time,
+                )
+            except Exception as e:
+                log_error(f"上傳至 Hugging Face 失敗: {e}")
+                print(f"❌ 上傳至 Hugging Face 失敗: {e}")
 
         log_info(f"評測完成，結果已匯出至: {', '.join(exported_files)}")
         return exported_files[0] if exported_files else ""
@@ -510,6 +536,17 @@ HuggingFace 資料集下載:
         help="基準測試的最大執行時間 (秒，不指定則執行完所有請求)",
     )
 
+    # HuggingFace 上傳參數
+    parser.add_argument(
+        "--hf-repo-id",
+        help="Hugging Face dataset repo ID，用於上傳結果 (格式: namespace/repo-name)",
+    )
+
+    parser.add_argument(
+        "--hf-variant",
+        help="結果變體名稱 (例如: low, medium, high)，用於區分不同評測條件",
+    )
+
     return parser
 
 
@@ -647,11 +684,21 @@ def main() -> int:
             log_error(f"基準測試執行錯誤: {e}")
             return 1
 
+    # 驗證 HF Repo ID (如果有提供)
+    if args.hf_repo_id:
+        try:
+            from .hf_uploader import validate_repo_id
+
+            validate_repo_id(args.hf_repo_id)
+        except Exception as e:
+            print(f"❌ 無效的 Hugging Face Repo ID: {e}")
+            return 1
+
     # 執行評測
     try:
         runner = TwinkleEvalRunner(args.config)
         runner.initialize()
-        runner.run_evaluation(args.export)
+        runner.run_evaluation(args.export, args.hf_repo_id, args.hf_variant)
     except Exception as e:
         log_error(f"執行失敗: {e}")
         return 1
