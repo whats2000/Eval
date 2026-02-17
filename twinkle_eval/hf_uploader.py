@@ -1,7 +1,7 @@
 """Hugging Face 資料集上傳服務"""
 
-import os
 import glob
+import os
 from typing import Optional
 
 from huggingface_hub import HfApi, HfFileSystem
@@ -65,6 +65,8 @@ def upload_results(
     # 決定上傳路徑
     # results/<model>/<variant>/
     variant_path = variant if variant else "default"
+    # 確保 variant 安全：移除路徑分隔符、父目錄引用及前後空白
+    variant_path = variant_path.strip().replace("/", "_").replace("\\", "_").replace("..", "_")
     #確保 model name 安全
     safe_model_name = model_name.replace("/", "__") 
     target_dir = f"results/{safe_model_name}/{variant_path}"
