@@ -349,6 +349,7 @@ class TwinkleEvalRunner:
             except Exception as e:
                 log_error(f"上傳至 Hugging Face 失敗: {e}")
                 print(f"❌ 上傳至 Hugging Face 失敗: {e}")
+                raise
 
         log_info(f"評測完成，結果已匯出至: {', '.join(exported_files)}")
         return exported_files[0] if exported_files else ""
