@@ -20,12 +20,11 @@ def validate_repo_id(repo_id: str) -> None:
     if not repo_id.endswith("-logs-and-scores"):
         raise ValueError(f"Repo 名稱必須以 '-logs-and-scores' 結尾: {repo_id}")
 
-    # 使用 HfApi 檢查存在性和類型
+    # 使用 HfApi 檢查存在性並確認為 dataset
     api = HfApi()
     try:
-        repo_info = api.repo_info(repo_id=repo_id, repo_type="dataset")
-        if repo_info.repo_type != "dataset":
-             raise ValueError(f"Repo {repo_id} 存在但不是 dataset repo")
+        # 若 repo 不是 dataset 或不存在，將在此拋出例外
+        api.dataset_info(repo_id=repo_id)
     except RepositoryNotFoundError:
         # Issue 描述: "不符合時應報錯並退出"。這意味著 repo 必須存在。
         raise ValueError(f"找不到 Dataset repo: {repo_id}")
