@@ -688,16 +688,7 @@ def main() -> int:
             log_error(f"基準測試執行錯誤: {e}")
             return 1
 
-    # 驗證 HF Repo ID (如果有提供)
-    if args.hf_repo_id:
-        try:
-            from .hf_uploader import validate_repo_id
-
-            validate_repo_id(args.hf_repo_id)
-        except Exception as e:
-            print(f"❌ 無效的 Hugging Face Repo ID: {e}")
-            return 1
-
+    # HF Repo ID 的有效性將在上傳階段由 hf_uploader.validate_repo_id 驗證，避免此處重複遠端呼叫
     # 執行評測
     try:
         runner = TwinkleEvalRunner(args.config)
