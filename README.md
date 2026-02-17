@@ -37,6 +37,10 @@
   - [API 效能設定](#api-效能設定)
 - [安裝設定](#安裝設定)
 - [使用方式](#使用方式)
+  - [快速開始](#快速開始)
+  - [命令列選項](#命令列選項)
+  - [Python API 使用](#python-api-使用)
+- [程式碼架構](#程式碼架構)
 - [設定檔說明](#設定檔說明)
   - [LLM API 設定](#llm-api-設定)
   - [模型設定](#模型設定)
@@ -61,6 +65,7 @@
 - **支援 OpenAI API 格式**：相容於常見的 GPT API 輸入與輸出格式。
 - **安全地處理 API 金鑰**：避免金鑰暴露於程式碼或日誌中。
 - **API 請求限流控制與自動重試機制**：減少錯誤發生並提高 API 請求成功率。
+- **HuggingFace 整合**：支援將評測結果自動上傳至 HuggingFace Dataset，方便分享與追蹤。
 
 ## 性能指標
 
@@ -189,7 +194,29 @@ twinkle-eval --version
 
 # 顯示完整幫助
 twinkle-eval --help
+
+# 評測並上傳結果至 HuggingFace（repo 不存在會自動創建）
+twinkle-eval --config config.yaml \
+  --hf-repo-id my-org/my-benchmark-logs-and-scores
+
+# 使用 variant 區分不同評測條件
+twinkle-eval --config config.yaml \
+  --hf-repo-id my-org/my-benchmark-logs-and-scores \
+  --hf-variant high-temperature
+
+# 結合多種輸出格式與 HuggingFace 上傳
+twinkle-eval --config config.yaml \
+  --export json csv html \
+  --hf-repo-id my-org/my-benchmark-logs-and-scores \
+  --hf-variant baseline
 ```
+
+**HuggingFace 上傳注意事項**：
+- Repo ID 格式：`namespace/repo-name`（repo-name 必須以 `-logs-and-scores` 結尾）
+- 需要先登入：`hf auth login` 或設定 `HF_TOKEN` 環境變數
+- Repo 不存在時會自動創建為公開 dataset
+- 已存在的檔案不會被覆蓋
+- 上傳路徑：`results/<model_name>/<variant>/`
 
 ### Python API 使用
 
@@ -206,6 +233,13 @@ runner.initialize()
 
 # 執行評測
 results = runner.run_evaluation(export_formats=["json", "csv"])
+
+# 執行評測並上傳至 HuggingFace
+results = runner.run_evaluation(
+    export_formats=["json", "csv"],
+    hf_repo_id="my-org/my-benchmark-logs-and-scores",
+    hf_variant="baseline"
+)
 
 print(f"評測完成！結果已儲存至：{results}")
 ```
