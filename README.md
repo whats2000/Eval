@@ -231,15 +231,15 @@ runner = TwinkleEvalRunner("config.yaml")
 # 初始化
 runner.initialize()
 
-# 執行評測
+# 方式一：僅執行評測
 results = runner.run_evaluation(export_formats=["json", "csv"])
 
-# 執行評測並上傳至 HuggingFace
-results = runner.run_evaluation(
-    export_formats=["json", "csv"],
-    hf_repo_id="my-org/my-benchmark-logs-and-scores",
-    hf_variant="baseline"
-)
+# 方式二：執行評測並上傳至 HuggingFace（二選一）
+# results = runner.run_evaluation(
+#     export_formats=["json", "csv"],
+#     hf_repo_id="my-org/my-benchmark-logs-and-scores",
+#     hf_variant="baseline"
+# )
 
 print(f"評測完成！結果已儲存至：{results}")
 ```
