@@ -11,7 +11,7 @@ from .logger import log_error, log_info
 
 
 def validate_repo_id(repo_id: str) -> None:
-    """驗證 Hugging Face repo ID 格式"""
+    """驗證 Hugging Face repo ID 格式，若不存在則自動創建"""
     # 檢查格式 <namespace>/<name>
     if "/" not in repo_id or len(repo_id.split("/")) != 2:
         raise ValueError(f"無效的 repo ID 格式: {repo_id}。必須為 <namespace>/<name>")
@@ -25,9 +25,19 @@ def validate_repo_id(repo_id: str) -> None:
     try:
         # 若 repo 不是 dataset 或不存在，將在此拋出例外
         api.dataset_info(repo_id=repo_id)
+        log_info(f"Dataset repo {repo_id} 已存在")
     except RepositoryNotFoundError:
-        # Issue 描述: "不符合時應報錯並退出"。這意味著 repo 必須存在。
-        raise ValueError(f"找不到 Dataset repo: {repo_id}")
+        # Repo 不存在，自動創建以提升 UX
+        log_info(f"Dataset repo {repo_id} 不存在，正在創建...")
+        try:
+            api.create_repo(
+                repo_id=repo_id,
+                repo_type="dataset",
+                private=False,
+            )
+            log_info(f"成功創建 Dataset repo: {repo_id}")
+        except Exception as create_error:
+            raise ValueError(f"創建 Dataset repo 失敗 {repo_id}: {create_error}")
     except Exception as e:
         # 例如: 認證錯誤
         raise ValueError(f"檢查 repo 時發生錯誤 {repo_id}: {e}")
