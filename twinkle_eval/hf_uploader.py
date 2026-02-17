@@ -101,4 +101,4 @@ def upload_results(
         
     except Exception as e:
         log_error(f"上傳至 Hugging Face 失敗: {e}")
-        raise e
+        raise
