@@ -539,7 +539,10 @@ HuggingFace 資料集下載:
     # HuggingFace 上傳參數
     parser.add_argument(
         "--hf-repo-id",
-        help="Hugging Face dataset repo ID，用於上傳結果 (格式: namespace/repo-name)",
+        help=(
+            "Hugging Face dataset repo ID，用於上傳結果 "
+            "(格式: namespace/repo-name，且 repo-name 必須以 `-logs-and-scores` 結尾，例如: my-org/my-benchmark-logs-and-scores)"
+        ),
     )
 
     parser.add_argument(
