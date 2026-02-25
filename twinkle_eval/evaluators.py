@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import socket
 import string
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -11,6 +12,18 @@ from .dataset import Dataset
 from .evaluation_strategies import EvaluationStrategy
 from .logger import log_error
 from .models import LLM
+
+
+def _get_node_id() -> str:
+    """取得當前節點識別碼，優先使用 SLURM_NODEID，否則回退至 node0。
+
+    在多節點 SLURM 作業中，每個節點的 SLURM_NODEID 各不相同（0, 1, 2, …），
+    確保各節點寫入不同的 JSONL 檔案，避免並發寫入衝突。
+    """
+    slurm_node = os.environ.get("SLURM_NODEID")
+    if slurm_node is not None:
+        return f"node{slurm_node}"
+    return "node0"
 
 
 class RateLimiter:
@@ -152,9 +165,13 @@ class Evaluator:
 
         results_dir = "results"
         os.makedirs(results_dir, exist_ok=True)
-        results_path = os.path.join(results_dir, f"eval_results_{timestamp}.jsonl")
+        # 每個節點寫入獨立的 JSONL 檔案，避免多節點並發寫入同一檔案造成資料交錯。
+        # 格式：eval_results_{timestamp}_{node_id}.jsonl
+        #   例：eval_results_20260225_1445_run0_node0.jsonl
+        node_id = _get_node_id()
+        results_path = os.path.join(results_dir, f"eval_results_{timestamp}_{node_id}.jsonl")
 
-        # 將每個 detail 項目寫入 JSONL 檔案（append 模式以累積同一 run 的所有檔案結果）
+        # append 模式：同一節點、同一 run 內的多個檔案依序累積，不覆蓋
         with open(results_path, "a", encoding="utf-8") as f:
             for detail in detailed_results:
                 f.write(json.dumps(detail, ensure_ascii=False) + "\n")
