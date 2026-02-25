@@ -38,13 +38,13 @@ class Evaluator:
 
     def shuffle_question_options(self, question_data):
         # 動態偵測所有大寫字母選項鍵（支援超過 4 個選項的資料集）
+        # 偵測所有純大寫字母鍵作為選項（支援超過 4 個選項及雙字母鍵如 AA、AB）
+        # 排序規則：先依長度（單字母 < 雙字母），再依字母順序，與 _choices_to_letter_keys 一致
         option_keys = sorted(
             [
                 k
                 for k in question_data
-                if len(k) >= 1
-                and all(c in string.ascii_uppercase for c in k)
-                and k not in ("answer",)
+                if k and all(c in string.ascii_uppercase for c in k) and k not in ("answer",)
             ],
             key=lambda k: (len(k), k),
         )
@@ -55,6 +55,13 @@ class Evaluator:
 
         correct_ans = question_data["answer"]
         correct_option_text = question_data.get(correct_ans)
+
+        if correct_option_text is None:
+            # answer 鍵不存在或對應值為 None，無法安全 shuffle，回傳原始資料
+            log_error(
+                f"shuffle_question_options: answer key '{correct_ans}' not found in options; skipping shuffle"
+            )
+            return question_data
 
         random.shuffle(options)
 

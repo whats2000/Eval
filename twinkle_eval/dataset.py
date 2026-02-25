@@ -6,7 +6,7 @@
 
 import json
 import os
-import string as _string
+import string
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -18,16 +18,22 @@ from tqdm import tqdm
 from .logger import log_error, log_info, log_warning
 
 
+def _index_to_label(idx: int) -> str:
+    """將 0-based 索引轉換為 Excel 風格的大寫字母標籤（A…Z、AA…AZ、BA…）。"""
+    letters = []
+    while True:
+        idx, rem = divmod(idx, 26)
+        letters.append(string.ascii_uppercase[rem])
+        if idx == 0:
+            break
+        # Excel 進位規則：每次迭代前先減一（A=1 而非 0）
+        idx -= 1
+    return "".join(reversed(letters))
+
+
 def _choices_to_letter_keys(choices: list) -> list:
-    """為 choices 清單產生對應的大寫字母標籤（A、B、C … Z、AA、AB …）。"""
-    labels = []
-    for i in range(len(choices)):
-        if i < 26:
-            labels.append(_string.ascii_uppercase[i])
-        else:
-            # 超過 26 個選項時使用雙字母，例如 AA、AB…
-            labels.append(_string.ascii_uppercase[(i // 26) - 1] + _string.ascii_uppercase[i % 26])
-    return labels
+    """為 choices 清單產生 Excel 風格的大寫字母標籤（A–Z、AA–AZ、BA–…）。"""
+    return [_index_to_label(i) for i in range(len(choices))]
 
 
 def _normalize_record(record: dict) -> dict:
@@ -49,7 +55,7 @@ def _normalize_record(record: dict) -> dict:
     choices = record.get("choices")
     answer = record.get("answer")
 
-    # Accept list or any array-like sequence (e.g. numpy.ndarray from parquet)
+    # 接受 list 或任何可迭代序列（例如 parquet 載入的 numpy.ndarray）
     if not (
         hasattr(choices, "__iter__")
         and not isinstance(choices, (str, bytes, dict))
@@ -57,7 +63,7 @@ def _normalize_record(record: dict) -> dict:
     ):
         return record
 
-    # Ensure it's a plain Python list for consistent handling
+    # 統一轉為 Python list 以確保後續處理一致
     choices = list(choices)
 
     labels = _choices_to_letter_keys(choices)
@@ -80,7 +86,9 @@ def _normalize_record(record: dict) -> dict:
             return record  # 無法對應到任何標籤，保持原始格式
         answer_letter = answer_str
 
-    # 建立正規化後的 record
+    # 建立正規化後的 record。
+    # 注意：若原始 record 中已存在與產生標籤同名的欄位（例如 "A"、"B"），
+    # 該欄位將被 choices 展開後的值覆寫，這是預期行為。
     normalized = {k: v for k, v in record.items() if k not in ("choices", "answer")}
     for label, text in zip(labels, choices):
         normalized[label] = text
