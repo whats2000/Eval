@@ -32,7 +32,8 @@ PP_SIZE=${3:-1}
 HF_UPLOAD_REPO=${4:-"whats2000/nemotron-nano-eval-logs-and-scores"}
 
 # 5. 生成控制參數 (Generation Parameters):
-MAX_TOKENS=${5:-32768}
+#                MAX_TOKENS: 必須小於 MAX_MODEL_LEN (因為要預留輸入 prompt 的空間)
+MAX_TOKENS=${5:-16384}
 THINKING_START_TAG=${6:-"<think>"}
 THINKING_END_TAG=${7:-"</think>"}
 
