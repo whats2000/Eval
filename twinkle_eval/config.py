@@ -101,6 +101,8 @@ class ConfigurationManager:
             "shuffle_options": False,  # 是否隨機打亂選項順序
             "datasets_prompt_map": {},  # 資料集語言對應表
             "strategy_config": {},  # 評測策略配置
+            "thinking_start_tag": None,  # 思考開始標籤（如 <think>），None 表示不啟用內嵌思考解析
+            "thinking_end_tag": None,  # 思考結束標籤（如 </think>），None 表示不啟用內嵌思考解析
         }
         for key, value in eval_defaults.items():
             if key not in self.config["evaluation"]:
@@ -285,7 +287,7 @@ class ConfigurationManager:
                     folder_info = (
                         drive_uploader.service.files()
                         .get(
-                            fileId=log_folder_id, 
+                            fileId=log_folder_id,
                             fields="id,name,mimeType",
                             supportsAllDrives=True
                         )
