@@ -1,9 +1,9 @@
 import json
 import os
 import random
+import re
 import socket
 import string
-import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -136,8 +136,8 @@ class Evaluator:
                 reasoning_content = getattr(message, "reasoning_content", None)
 
                 # 若設定 thinking_end_tag，則從回應中拆分思考過程與最終答案（相容開頭標籤被截斷的情況）。
-                _thinking_start_tag = self.config["evaluation"].get("thinking_start_tag")
-                _thinking_end_tag = self.config["evaluation"].get("thinking_end_tag")
+                _thinking_start_tag = self.config["model"].get("thinking_start_tag")
+                _thinking_end_tag = self.config["model"].get("thinking_end_tag")
                 if (
                     reasoning_content is None
                     and _thinking_end_tag

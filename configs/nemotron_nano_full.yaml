@@ -1,0 +1,70 @@
+llm_api:
+  base_url: "PLACEHOLDER_BASE_URL"   # Substituted at job launch time
+  api_key: "PLACEHOLDER_API_KEY"     # Substituted at job launch time
+  disable_ssl_verify: false
+  api_rate_limit: -1                 # No limit: let vLLM's server queue manage concurrency
+  max_retries: 5
+  timeout: 600
+
+model:
+  name: "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
+  temperature: 0.0
+  top_p: 0.9
+  max_tokens: 16384
+  frequency_penalty: 0.0
+  presence_penalty: 0.0
+  extra_body:
+  thinking_start_tag: "<think>"   # Nemotron 內嵌思考標籤起始
+  thinking_end_tag: "</think>"    # Nemotron 內嵌思考標籤結尾
+
+evaluation:
+  dataset_paths:
+    # Paths produced by the twinkle-eval --download-dataset commands in the job script
+    - "/work/whats2000/datasets/ikala__tmmluplus/"
+    - "/work/whats2000/datasets/lianghsun__tw-legal-benchmark-v1/"
+    - "/work/whats2000/datasets/cais__mmlu/"
+  evaluation_method: "box"
+  system_prompt:
+    zh: |
+      使用者將提供一個題目，並附上選項 A、B、C、D
+      請仔細閱讀題目要求，根據題意選出最符合的選項，並將選項以以下格式輸出：
+      \box{選項}
+      請確保僅將選項包含在 { } 中，否則將不計算為有效答案。
+      務必精確遵循輸出格式，避免任何多餘內容或錯誤格式。
+    en: |
+      The user will provide a question along with options A, B, C, and D.
+      Please read the question carefully and select the option that best fits the requirements.
+      Output the selected option in the following format:
+      \box{Option}
+      Make sure to include only the option within the curly braces; otherwise, it will not be considered a valid answer.
+      Strictly follow the output format and avoid any extra content or incorrect formatting.
+  datasets_prompt_map:
+    # cais__mmlu path uses English prompt
+    "/work/whats2000/datasets/cais__mmlu/": "en"
+  repeat_runs: 3
+  shuffle_options: true
+
+environment:
+  gpu_info:
+    model: "PLACEHOLDER_GPU_MODEL"
+    count: PLACEHOLDER_GPU_COUNT
+    memory_gb: PLACEHOLDER_GPU_MEMORY_GB
+    cuda_version: "PLACEHOLDER_CUDA_VERSION"
+    driver_version: "PLACEHOLDER_DRIVER_VERSION"
+  parallel_config:
+    tp_size: 1
+    pp_size: 1
+  system_info:
+    framework: "vLLM"
+    python_version: "PLACEHOLDER_PYTHON_VERSION"
+    torch_version: "PLACEHOLDER_TORCH_VERSION"
+    node_count: 1
+
+logging:
+  level: "INFO"
+
+google_services:
+  google_drive:
+    enabled: false
+  google_sheets:
+    enabled: false
