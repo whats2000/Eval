@@ -11,7 +11,7 @@ def merge_distributed_results(timestamp: str, hf_repo_id: Optional[str] = None, 
     """合併平行運算產生的碎片並重新計算評測指標，最後刪除碎片"""
 
     results_dir = "results"
-    json_shards = glob.glob(os.path.join(results_dir, f"results_{timestamp}_node*_rank*.json"))
+    json_shards = sorted(glob.glob(os.path.join(results_dir, f"results_{timestamp}_node*_rank*.json")))
 
     if not json_shards:
         print(f"❌ 找不到時間戳記為 {timestamp} 的評測碎片。")
