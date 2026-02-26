@@ -3,6 +3,7 @@ import os
 import random
 import socket
 import string
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -133,6 +134,15 @@ class Evaluator:
                 usage = llm_chat_completion.usage
                 content = message.content
                 reasoning_content = getattr(message, "reasoning_content", None)
+
+                # 部分模型（如 DeepSeek-R1 系列、Nemotron）將思考過程內嵌於 <think> 標籤中，需手動拆分為 reasoning_content 與最終回答。
+                if reasoning_content is None and content and "<think>" in content:
+                    _think_match = re.search(r"<think>(.*?)</think>", content, re.DOTALL)
+                    if _think_match:
+                        reasoning_content = _think_match.group(1).strip()
+                        content = re.sub(
+                            r"<think>.*?</think>", "", content, flags=re.DOTALL
+                        ).strip()
 
                 question_text, correct_answer, question_id = future_to_data[future]
                 predicted_answer = self.evaluation_strategy.extract_answer(content)
