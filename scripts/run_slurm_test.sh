@@ -9,7 +9,7 @@
 #SBATCH --time=01:30:00                 #    測試用不會太長
 #SBATCH --output=logs/slurm_test_%j.out #    輸出日誌
 #SBATCH --error=logs/slurm_test_%j.err  #    錯誤日誌
-#SBATCH --account=GOV108018             # <= 請改成你的帳號或計畫代號
+#SBATCH --account=YOUR_ACCOUNT          # <= 請改成你的帳號或計畫代號
 
 set -euo pipefail
 
