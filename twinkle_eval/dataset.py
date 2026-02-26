@@ -211,6 +211,11 @@ def find_all_evaluation_files(dataset_root: str) -> list:
             if ext == ".lock":
                 continue
 
+            # 跳過 mmlu 的 all.parquet 以避免重複評估
+            if file == "all.parquet" and "mmlu" in file_path.lower():
+                log_warning(f"跳過 mmlu 的 all.parquet: {file_path}")
+                continue
+
             if ext in supported_extensions:
                 all_files.append(file_path)
             else:
