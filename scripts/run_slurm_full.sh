@@ -33,8 +33,8 @@ HF_UPLOAD_REPO=${4:-"whats2000/nemotron-nano-eval-logs-and-scores"}
 
 # 5. 生成控制參數 (Generation Parameters):
 MAX_TOKENS=${5:-4096}
-THINKING_START_TAG=${6:-"<thinking>"}
-THINKING_END_TAG=${7:-"</thinking>"}
+THINKING_START_TAG=${6:-"<think>"}
+THINKING_END_TAG=${7:-"</think>"}
 
 # 6. 伺服器啟動參數 (Server Parameters):
 #    MAX_MODEL_LEN: 模型最大上下文長度 (會影響 vLLM 分配的 GPU 記憶體量)

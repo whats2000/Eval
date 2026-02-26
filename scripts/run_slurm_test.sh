@@ -33,12 +33,16 @@ HF_UPLOAD_REPO=${4:-"whats2000/nemotron-nano-test-logs-and-scores"}
 
 # 5. 生成控制參數 (Generation Parameters):
 MAX_TOKENS=${5:-4096}
-THINKING_START_TAG=${6:-"<thinking>"}
-THINKING_END_TAG=${7:-"</thinking>"}
+THINKING_START_TAG=${6:-"<think>"}
+THINKING_END_TAG=${7:-"</think>"}
 
 # 6. 伺服器啟動參數 (Server Parameters):
 #    MAX_MODEL_LEN: 模型最大上下文長度 (會影響 vLLM 分配的 GPU 記憶體量)
 MAX_MODEL_LEN=${8:-32768}
+
+# 9. HF_VARIANT: 上傳到 Hugging Face 時的 variant 名稱，用於在同一個 Repo 下區分不同評測條件。
+#               例如："test_calibration"、"high-temperature"、"baseline" 等。
+HF_VARIANT=${9:-"test_calibration"}
 
 # 7. 工作目錄 (Working Directory): 請設定為您存放此專案程式碼的絕對路徑。
 WORK_DIR="/home/whats2000/workspace/Eval"      # <= 請改成你的工作目錄
@@ -207,7 +211,7 @@ if [ -n "$LATEST_TIMESTAMP" ]; then
     echo "發現評測碎片 (Timestamp: $LATEST_TIMESTAMP)，開始合併與產生最終報告..."
     
     if [ -n "$HF_UPLOAD_REPO" ] && [ "$HF_UPLOAD_REPO" != "your-org/eval-logs" ]; then
-        uv run twinkle-eval --merge-results "${LATEST_TIMESTAMP}" --hf-repo-id "${HF_UPLOAD_REPO}" --hf-variant "test_calibration"
+        uv run twinkle-eval --merge-results "${LATEST_TIMESTAMP}" --hf-repo-id "${HF_UPLOAD_REPO}" --hf-variant "${HF_VARIANT}"
     else
         uv run twinkle-eval --merge-results "${LATEST_TIMESTAMP}"
     fi
