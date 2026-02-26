@@ -91,8 +91,29 @@ class Evaluator:
         return new_data
 
     def evaluate_file(self, file_path: str, timestamp: str, prompt_lang: str = "zh"):
-        dataset = Dataset(file_path)
+        world_size = self.config.get("distributed", {}).get("world_size", 1)
+        rank = self.config.get("distributed", {}).get("rank", 0)
+        
+        node_id = None
+        if world_size > 1:
+            slurm_node = os.environ.get("SLURM_NODEID")
+            node_id = slurm_node if slurm_node is not None else "0"
+
+        dataset = Dataset(file_path, node_id=node_id, rank=rank if world_size > 1 else None)
         shuffle_enabled = self.config["evaluation"].get("shuffle_options", False)
+
+        start_idx = 0
+
+        # 根據 WORLD_SIZE 和 RANK 進行資料切分 (Sharding)
+        if world_size > 1:
+            total_size = len(dataset.data)
+            chunk_size = (total_size + world_size - 1) // world_size
+            start_idx = rank * chunk_size
+            end_idx = min(start_idx + chunk_size, total_size)
+            if start_idx >= total_size:
+                dataset.data = []
+            else:
+                dataset.data = dataset.data[start_idx:end_idx]
 
         total_correct = 0
         total_questions = 0
@@ -102,7 +123,7 @@ class Evaluator:
             future_tasks = []
             future_to_data = {}
 
-            for idx, q in enumerate(tqdm(dataset, desc="處理題庫中")):
+            for idx, q in enumerate(tqdm(dataset, desc="處理題庫中"), start=start_idx):
                 if shuffle_enabled:
                     q = self.shuffle_question_options(q)
 
@@ -189,15 +210,20 @@ class Evaluator:
         results_dir = "results"
         os.makedirs(results_dir, exist_ok=True)
         # 每個節點寫入獨立的 JSONL 檔案，避免多節點並發寫入同一檔案造成資料交錯。
-        # 格式：eval_results_{timestamp}_{node_id}.jsonl
-        #   例：eval_results_20260225_1445_run0_node0.jsonl
-        node_id = _get_node_id()
-        results_path = os.path.join(results_dir, f"eval_results_{timestamp}_{node_id}.jsonl")
+        if world_size > 1:
+            node_id = _get_node_id()
+            results_path = os.path.join(results_dir, f"eval_results_{timestamp}_{node_id}_rank{rank}.jsonl")
+        else:
+            results_path = os.path.join(results_dir, f"eval_results_{timestamp}.jsonl")
 
         # append 模式：同一節點、同一 run 內的多個檔案依序累積，不覆蓋
         with open(results_path, "a", encoding="utf-8") as f:
             for detail in detailed_results:
                 f.write(json.dumps(detail, ensure_ascii=False) + "\n")
 
-        print(f"✅ 評測完成，結果已儲存至 {results_path}")
+        if world_size > 1:
+            print(f"[節點 {node_id} | Rank {rank}] ✅ 評測完成，結果已儲存至 {results_path}")
+        else:
+            print(f"✅ 評測完成，結果已儲存至 {results_path}")
+            
         return file_path, accuracy, results_path

@@ -160,6 +160,9 @@ class ConfigValidator:
 
         if "datasets_prompt_map" in eval_config:
             prompt_map = eval_config["datasets_prompt_map"]
+            if prompt_map is None:
+                prompt_map = {}
+                eval_config["datasets_prompt_map"] = prompt_map
             if not isinstance(prompt_map, dict):
                 raise ValidationError("Evaluation 'datasets_prompt_map' must be a dictionary")
 

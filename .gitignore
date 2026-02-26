@@ -131,3 +131,11 @@ results/
 
 # real config file
 config.yaml
+
+# configs directory
+configs/*.yaml
+!configs/config_slurm_*.yaml
+
+# scripts directory
+scripts/*.sh
+!scripts/run_slurm_*.sh

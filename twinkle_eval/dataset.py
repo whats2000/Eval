@@ -109,18 +109,25 @@ class Dataset:
     自動將 MMLU HuggingFace 格式（choices + 整數 answer）正規化為 A/B/C/D 格式。
     """
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, node_id: str = None, rank: int = None):
         """初始化資料集
 
         Args:
             file_path: 資料集檔案路徑
+            node_id: SLURM 節點 ID (可選)
+            rank: 分散式訓練的 rank (可選)
         """
         self.file_path = file_path
+        self.node_id = node_id
+        self.rank = rank
         self.data = self._load_data()
 
     def _load_data(self):
         ext = os.path.splitext(self.file_path)[-1].lower()
-        print(f"正在讀取: {self.file_path}")
+        if self.node_id is not None and self.rank is not None:
+            print(f"[節點 {self.node_id} | Rank {self.rank}] 正在讀取: {self.file_path}")
+        else:
+            print(f"正在讀取: {self.file_path}")
         try:
             if ext == ".json":  # [{}...]
                 with open(self.file_path, "r", encoding="utf-8") as f:

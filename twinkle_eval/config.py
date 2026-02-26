@@ -1,3 +1,4 @@
+import os
 from typing import Any, Dict
 
 import yaml
@@ -131,6 +132,24 @@ class ConfigurationManager:
         for key, value in env_defaults.items():
             if key not in self.config["environment"]:
                 self.config["environment"][key] = value
+
+        # 設定分散式環境評測 (從環境變數取得 RANK / WORLD_SIZE)
+        world_size = int(os.environ.get("WORLD_SIZE", "1"))
+        rank = int(os.environ.get("RANK", "0"))
+
+        dist_defaults = {
+            "world_size": world_size,
+            "rank": rank,
+        }
+        if "distributed" not in self.config:
+            self.config["distributed"] = dist_defaults
+        else:
+            for key, value in dist_defaults.items():
+                if key not in self.config["distributed"]:
+                    self.config["distributed"][key] = value
+
+        if world_size > 1:
+            log_info(f"啟用分散式評測: 世界大小(WORLD_SIZE) {world_size}, 當前進程(RANK) {rank}")
 
     def _validate_dataset_paths(self):
         """驗證資料集路徑是否存在且可存取

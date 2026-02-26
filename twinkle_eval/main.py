@@ -240,7 +240,14 @@ class TwinkleEvalRunner:
 
             # 進度指示器
             progress = (idx + 1) / len(all_files) * 100
-            print(f"\r已執行 {progress:.1f}% ({idx + 1}/{len(all_files)}) ", end="")
+            world_size = self.config.get("distributed", {}).get("world_size", 1)
+            if world_size > 1:
+                slurm_node = os.environ.get("SLURM_NODEID")
+                node_id = slurm_node if slurm_node is not None else "0"
+                rank = self.config.get("distributed", {}).get("rank", 0)
+                print(f"\r[節點 {node_id} | Rank {rank}] 已執行 {progress:.1f}% ({idx + 1}/{len(all_files)}) ", end="")
+            else:
+                print(f"\r已執行 {progress:.1f}% ({idx + 1}/{len(all_files)}) ", end="")
 
         print()  # 進度完成後換行
 
@@ -300,11 +307,22 @@ class TwinkleEvalRunner:
                 dataset_result = self._evaluate_dataset(dataset_path, evaluator)
                 dataset_results[dataset_path] = dataset_result
 
-                message = (
-                    f"資料集 {dataset_path} 評測完成，"
-                    f"平均正確率: {dataset_result['average_accuracy']:.2%} "
-                    f"(±{dataset_result['average_std']:.2%})"
-                )
+                world_size = self.config.get("distributed", {}).get("world_size", 1)
+                if world_size > 1:
+                    slurm_node = os.environ.get("SLURM_NODEID")
+                    node_id = slurm_node if slurm_node is not None else "0"
+                    rank = self.config.get("distributed", {}).get("rank", 0)
+                    message = (
+                        f"[節點 {node_id} | Rank {rank}] 資料集 {dataset_path} 評測完成，"
+                        f"平均正確率: {dataset_result['average_accuracy']:.2%} "
+                        f"(±{dataset_result['average_std']:.2%})"
+                    )
+                else:
+                    message = (
+                        f"資料集 {dataset_path} 評測完成，"
+                        f"平均正確率: {dataset_result['average_accuracy']:.2%} "
+                        f"(±{dataset_result['average_std']:.2%})"
+                    )
                 print(message)
                 log_info(message)
 
@@ -324,7 +342,15 @@ class TwinkleEvalRunner:
         }
 
         # 以多種格式輸出結果
-        base_output_path = os.path.join(self.results_dir, f"results_{self.start_time}")
+        world_size = self.config.get("distributed", {}).get("world_size", 1)
+        rank = self.config.get("distributed", {}).get("rank", 0)
+        
+        if world_size > 1:
+            slurm_node = os.environ.get("SLURM_NODEID", "0")
+            base_output_path = os.path.join(self.results_dir, f"results_{self.start_time}_node{slurm_node}_rank{rank}")
+        else:
+            base_output_path = os.path.join(self.results_dir, f"results_{self.start_time}")
+            
         exported_files = ResultsExporterFactory.export_results(
             final_results, base_output_path, export_formats, self.config
         )
@@ -333,23 +359,27 @@ class TwinkleEvalRunner:
         self._handle_google_services(final_results, export_formats)
 
         if hf_repo_id:
-            try:
-                from .hf_uploader import upload_results
-
-                # Model name from config
-                model_name = self.config.get("model", {}).get("name", "unknown_model")
-
-                upload_results(
-                    repo_id=hf_repo_id,
-                    variant=hf_variant,
-                    model_name=model_name,
-                    results_dir=self.results_dir,
-                    timestamp=self.start_time,
-                )
-            except Exception as e:
-                log_error(f"上傳至 Hugging Face 失敗: {e}")
-                print(f"❌ 上傳至 Hugging Face 失敗: {e}")
-                raise
+            if world_size > 1:
+                log_info("分散式評測單一節點完成，跳過 Hugging Face 上傳 (將於合併階段執行)。")
+                print("⚠️ 分散式評測單一節點完成，跳過 Hugging Face 上傳 (將於合併階段執行)。")
+            else:
+                try:
+                    from .hf_uploader import upload_results
+    
+                    # Model name from config
+                    model_name = self.config.get("model", {}).get("name", "unknown_model")
+    
+                    upload_results(
+                        repo_id=hf_repo_id,
+                        variant=hf_variant,
+                        model_name=model_name,
+                        results_dir=self.results_dir,
+                        timestamp=self.start_time,
+                    )
+                except Exception as e:
+                    log_error(f"上傳至 Hugging Face 失敗: {e}")
+                    print(f"❌ 上傳至 Hugging Face 失敗: {e}")
+                    raise
 
         log_info(f"評測完成，結果已匯出至: {', '.join(exported_files)}")
         return exported_files[0] if exported_files else ""
@@ -497,6 +527,12 @@ HuggingFace 資料集下載:
         help="將 JSON 結果檔案轉換為 HTML 格式",
     )
 
+    parser.add_argument(
+        "--merge-results",
+        metavar="TIMESTAMP",
+        help="合併多個分散式節點產生的結果碎片、重新計算準確率、上傳至 HuggingFace (需搭配 --hf-repo-id) 並清理碎片",
+    )
+
     # Benchmark 相關命令
     parser.add_argument(
         "--benchmark",
@@ -640,6 +676,15 @@ def main() -> int:
             return convert_json_to_html(args.convert_to_html)
         except Exception as e:
             print(f"❌ 轉換失敗: {e}")
+            return 1
+            
+    # 合併分散式結果命令
+    if args.merge_results:
+        try:
+            from .merge import merge_distributed_results
+            return merge_distributed_results(args.merge_results, args.hf_repo_id, args.hf_variant)
+        except Exception as e:
+            print(f"❌ 分散式結果合併失敗: {e}")
             return 1
 
     # Benchmark 命令
