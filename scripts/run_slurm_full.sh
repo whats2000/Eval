@@ -9,7 +9,7 @@
 #SBATCH --time=2-00:00:00               # <= 請改成你的時間限制
 #SBATCH --output=logs/slurm_full_%j.out #    請改成你的輸出日誌路徑
 #SBATCH --error=logs/slurm_full_%j.err  #    請改成你的錯誤日誌路徑
-#SBATCH --account=GOV108018             #    請改成你的帳號或計畫代號
+#SBATCH --account=YOUR_ACCOUNT          #    請改成你的帳號或計畫代號
 
 set -euo pipefail
 
