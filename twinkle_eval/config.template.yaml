@@ -14,6 +14,8 @@ model:
   frequency_penalty: 0.0    # 頻率懲罰
   presence_penalty: 0.0     # 存在懲罰
   extra_body:
+  thinking_start_tag: null  # 思考開始標籤，如 "<think>"；null 表示不啟用內嵌思考解析
+  thinking_end_tag: null    # 思考結束標籤，如 "</think>"；null 表示不啟用內嵌思考解析
 
 evaluation:
   dataset_paths:            # 資料集路徑
