@@ -242,7 +242,7 @@ echo "等待檔案系統同步..."
 sleep 5
 
 # 自動抓取最新產生的時間戳記
-LATEST_TIMESTAMP=$(ls -1qr results/results_*_node*_rank*.json 2>/dev/null | head -n 1 | grep -oP '\d{8}_\d{4}')
+LATEST_TIMESTAMP=$({ ls -1qr results/results_*_node*_rank*.json 2>/dev/null | head -n 1 | grep -oP '\d{8}_\d{4}'; } || true)
 
 if [ -n "$LATEST_TIMESTAMP" ]; then
     echo "=========================================="
