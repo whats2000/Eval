@@ -94,8 +94,8 @@ def upload_results(
             # 檢查檔案是否存在以防止覆蓋
             # 需求: "既有 repo 檔案不得覆蓋"
             if fs.exists(f"datasets/{repo_id}/{path_in_repo}"):
-                 log_error(f"檔案 {path_in_repo} 已存在於 repo 中。跳過以防止覆蓋。")
-                 continue
+                log_error(f"檔案 {path_in_repo} 已存在於 repo 中。跳過以防止覆蓋。")
+                continue
 
             print(f"正在上傳 {file_name}...")
             api.upload_file(
