@@ -287,7 +287,9 @@ class ConfigurationManager:
                     folder_info = (
                         drive_uploader.service.files()
                         .get(
-                            fileId=log_folder_id, fields="id,name,mimeType", supportsAllDrives=True
+                            fileId=log_folder_id,
+                            fields="id,name,mimeType",
+                            supportsAllDrives=True
                         )
                         .execute()
                     )
