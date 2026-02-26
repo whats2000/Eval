@@ -121,7 +121,7 @@ class ConfigurationManager:
                 "cuda_version": "Unknown",
                 "driver_version": "Unknown",
             },
-            "parallel_config": {"tp_size": 1, "pp_size": 1},
+            "parallel_config": {"tp_size": 1, "pp_size": 1, "max_model_len": None},
             "system_info": {
                 "framework": "Unknown",
                 "python_version": "Unknown",

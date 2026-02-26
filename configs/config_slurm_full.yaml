@@ -52,6 +52,7 @@ environment:
   parallel_config:
     tp_size: PLACEHOLDER_TP_SIZE
     pp_size: PLACEHOLDER_PP_SIZE
+    max_model_len: PLACEHOLDER_MAX_MODEL_LEN
   system_info:
     framework: "vLLM"
     python_version: "PLACEHOLDER_PYTHON_VERSION"

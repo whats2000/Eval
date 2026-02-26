@@ -22,7 +22,7 @@ evaluation:
     - "datasets/dataset1/"
     - "datasets/dataset2/"
   evaluation_method: "box"  # 評測方法（支援 "pattern" 或 "box"）
-  system_prompt:             # 系統提示詞，僅於 box 評測方法中使用
+  system_prompt:            # 系統提示詞，僅於 box 評測方法中使用
     zh: |
       使用者將提供一個題目，並附上選項 A、B、C、D
       請仔細閱讀題目要求，根據題意選出最符合的選項，並將選項以以下格式輸出：
@@ -38,8 +38,8 @@ evaluation:
       Strictly follow the output format and avoid any extra content or incorrect formatting.
   datasets_prompt_map:
     "datasets/mmlu/": "en"  # 指定資料集使用英文提示詞
-  repeat_runs: 5           # 單一 datasets 重複執行次數
-  shuffle_options: true    # 是否對選項進行隨機排序
+  repeat_runs: 5            # 單一 datasets 重複執行次數
+  shuffle_options: true     # 是否對選項進行隨機排序
 
 environment:
   gpu_info:
@@ -51,10 +51,11 @@ environment:
   parallel_config:
     tp_size: 1                                 # Tensor Parallel 大小
     pp_size: 1                                 # Pipeline Parallel 大小
+    max_model_len: 4096                        # 最大模型長度
   system_info:
     framework: "vLLM"                          # 使用的深度學習框架
-    python_version: "3.10.12"                 # Python 版本
-    torch_version: "2.1.0"                    # PyTorch 版本
+    python_version: "3.10.12"                  # Python 版本
+    torch_version: "2.1.0"                     # PyTorch 版本
     node_count: 1                              # 節點數量
 
 logging:
@@ -66,13 +67,13 @@ google_services:
   google_drive:
     enabled: false                                    # 是否啟用 Google Drive 上傳
     auth_method: "service_account"                    # 驗證方式: service_account 或 oauth
-    credentials_file: "service_account.json"  # Service Account 憑證檔案路徑 (service_account) 或 OAuth 客戶端憑證 (oauth)
-    log_folder_id: ""                                # 目標資料夾 ID（可選，不填則上傳到根目錄）
+    credentials_file: "service_account.json"          # Service Account 憑證檔案路徑 (service_account) 或 OAuth 客戶端憑證 (oauth)
+    log_folder_id: ""                                 # 目標資料夾 ID（可選，不填則上傳到根目錄）
   
   # Google Sheets 設定 - 用於記錄評測結果
   google_sheets:
     enabled: false                                    # 是否啟用 Google Sheets 匯出
     auth_method: "service_account"                    # 驗證方式: service_account 或 oauth  
-    credentials_file: "service_account.json"  # Service Account 憑證檔案路徑
-    spreadsheet_id: ""                               # 試算表 ID（必須）
-    sheet_name: "Results"                            # 工作表名稱（預設為 Results）
+    credentials_file: "service_account.json"          # Service Account 憑證檔案路徑
+    spreadsheet_id: ""                                # 試算表 ID（必須）
+    sheet_name: "Results"                             # 工作表名稱（預設為 Results）
