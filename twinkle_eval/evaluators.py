@@ -106,13 +106,26 @@ class Evaluator:
                 content = message.content
                 reasoning_content = getattr(message, "reasoning_content", None)
 
-                # 部分模型（如 DeepSeek-R1 系列、Nemotron）將思考過程內嵌於 <think> 標籤中，需手動拆分為 reasoning_content 與最終回答。
-                if reasoning_content is None and content and "<think>" in content:
-                    _think_match = re.search(r"<think>(.*?)</think>", content, re.DOTALL)
+                # 若設定 thinking_end_tag，則從回應中拆分思考過程與最終答案（相容開頭標籤被截斷的情況）。
+                _thinking_start_tag = self.config["evaluation"].get("thinking_start_tag")
+                _thinking_end_tag = self.config["evaluation"].get("thinking_end_tag")
+                if (
+                    reasoning_content is None
+                    and _thinking_end_tag
+                    and content
+                    and _thinking_end_tag in content
+                ):
+                    _start = re.escape(_thinking_start_tag) if _thinking_start_tag else None
+                    _end = re.escape(_thinking_end_tag)
+                    _pattern = rf"{_start}(.*?){_end}|^(.*?){_end}" if _start else rf"^(.*?){_end}"
+                    _think_match = re.search(_pattern, content, re.DOTALL)
                     if _think_match:
-                        reasoning_content = _think_match.group(1).strip()
+                        reasoning_content = next(
+                            (g for g in _think_match.groups() if g is not None), ""
+                        ).strip()
+                        _strip_pattern = rf"({_start})?.*?{_end}" if _start else rf".*?{_end}"
                         content = re.sub(
-                            r"<think>.*?</think>", "", content, flags=re.DOTALL
+                            _strip_pattern, "", content, count=1, flags=re.DOTALL
                         ).strip()
 
                 question_text, correct_answer, question_id = future_to_data[future]
