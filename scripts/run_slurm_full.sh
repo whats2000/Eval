@@ -247,6 +247,14 @@ EOF
 chmod +x $WRAPPER_SCRIPT
 
 echo "透過 srun 部署任務到各個節點..."
+
+# 在啟動所有 worker 之前，由 head node 統一記錄並匯出固定時間戳。
+# SLURM 會自動將已匯出的環境變數傳遞給所有 srun task，
+# 確保所有 node/rank 使用相同的時間戳，避免跨分鐘邊界造成合併失敗。
+RUN_TIMESTAMP=$(date +"%Y%m%d_%H%M")
+export TWINKLE_EVAL_RUN_TIMESTAMP="${RUN_TIMESTAMP}"
+echo "本次評測時間戳 (RUN_TIMESTAMP): ${RUN_TIMESTAMP}"
+
 START_TIME=$(date +%s)
 
 # srun 會自動在每一個分配到的節點上執行封裝腳本並設定 SLURM_NODEID
@@ -266,20 +274,39 @@ rm -f $CONFIG_RUN $WRAPPER_SCRIPT
 echo "等待檔案系統同步..."
 sleep 5
 
-# 同時搜尋分散式碎片與單節點結果，取最新時間戳記
-LATEST_TIMESTAMP=$(
-    { ls -1qr results/results_????????_????.json 2>/dev/null || true; } \
-    | head -n 1 | grep -oP '\d{8}_\d{4}' || true
-)
+# 直接使用本次 job 開始時統一設定的 RUN_TIMESTAMP，不再動態掃描。
+# 這避免了多節點在不同分鐘啟動時產生不同時間戳、導致合併遺漏碎片的問題。
+if [ -n "${RUN_TIMESTAMP:-}" ]; then
+    # 清點實際寫出的 JSON shard 數是否符合預期 rank 數
+    # 多節點腳本：預期 DP_SIZE (= NNODES × INSTANCES_PER_NODE) 個 shard
+    EXPECTED_SHARDS=${DP_SIZE}
+    # 同時支援兩種檔案格式：
+    #   多 rank： results_{ts}_node*_rank*.json  (world_size > 1)
+    #   單 rank： results_{ts}.json              (world_size = 1)
+    ACTUAL_SHARDS=$(ls -1 "results/results_${RUN_TIMESTAMP}_node"*"_rank"*".json" 2>/dev/null | wc -l)
+    if [ "${ACTUAL_SHARDS}" -eq 0 ]; then
+        # 回落檢查单節點無後綴格式
+        if ls "results/results_${RUN_TIMESTAMP}.json" 2>/dev/null; then
+            ACTUAL_SHARDS=1
+        fi
+    fi
 
-if [ -n "$LATEST_TIMESTAMP" ]; then
     echo "=========================================="
-    echo "取得評測結果 (Timestamp: $LATEST_TIMESTAMP)，開始合併與上傳..."
+    echo "Shard 清點：預期 ${EXPECTED_SHARDS} 個，實際找到 ${ACTUAL_SHARDS} 個 (Timestamp: ${RUN_TIMESTAMP})"
+
+    if [ "${ACTUAL_SHARDS}" -eq 0 ]; then
+        echo "❌ 找不到任何 shard 檔案，可能所有節點均評測失敗，中止合併。"
+        exit 1
+    elif [ "${ACTUAL_SHARDS}" -lt "${EXPECTED_SHARDS}" ]; then
+        echo "⚠️  警告：僅收到 ${ACTUAL_SHARDS}/${EXPECTED_SHARDS} 個 shard，部分節點/rank 可能失敗，結果將不完整。"
+    else
+        echo "✅ Shard 數量符合預期，開始合併與上傳..."
+    fi
 
     if [ -n "$HF_UPLOAD_REPO" ] && [ "$HF_UPLOAD_REPO" != "your-org/eval-logs" ]; then
-        uv run twinkle-eval --finalize-results "${LATEST_TIMESTAMP}" --hf-repo-id "${HF_UPLOAD_REPO}" --hf-variant "${HF_VARIANT}"
+        uv run twinkle-eval --finalize-results "${RUN_TIMESTAMP}" --hf-repo-id "${HF_UPLOAD_REPO}" --hf-variant "${HF_VARIANT}"
     else
-        uv run twinkle-eval --finalize-results "${LATEST_TIMESTAMP}"
+        uv run twinkle-eval --finalize-results "${RUN_TIMESTAMP}"
     fi
 else
     echo "⚠️ 找不到任何可供處理的評測結果，請確認各節點評測是否已完成並寫入 results/ 目錄。"

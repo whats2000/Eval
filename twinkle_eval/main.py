@@ -128,7 +128,13 @@ class TwinkleEvalRunner:
         """
         try:
             self.config = load_config(self.config_path)  # 載入配置
-            self.start_time = datetime.now().strftime("%Y%m%d_%H%M")  # 生成時間標記
+            # 優先使用外部注入的固定時間戳（由 Slurm 腳本在啟動所有 worker 前統一設定），
+            # 確保多節點分散式評測中所有 rank 使用同一時間戳，避免跨分鐘邊界導致合併失敗。
+            self.start_time = os.environ.get(
+                "TWINKLE_EVAL_RUN_TIMESTAMP"
+            ) or datetime.now().strftime(
+                "%Y%m%d_%H%M"
+            )  # 生成時間標記
             self.start_datetime = datetime.now()  # 記錄開始時間
 
             os.makedirs(self.results_dir, exist_ok=True)  # 建立結果目錄
@@ -245,7 +251,10 @@ class TwinkleEvalRunner:
                 slurm_node = os.environ.get("SLURM_NODEID")
                 node_id = slurm_node if slurm_node is not None else "0"
                 rank = self.config.get("distributed", {}).get("rank", 0)
-                print(f"\r[節點 {node_id} | Rank {rank}] 已執行 {progress:.1f}% ({idx + 1}/{len(all_files)}) ", end="")
+                print(
+                    f"\r[節點 {node_id} | Rank {rank}] 已執行 {progress:.1f}% ({idx + 1}/{len(all_files)}) ",
+                    end="",
+                )
             else:
                 print(f"\r已執行 {progress:.1f}% ({idx + 1}/{len(all_files)}) ", end="")
 
@@ -344,13 +353,15 @@ class TwinkleEvalRunner:
         # 以多種格式輸出結果
         world_size = self.config.get("distributed", {}).get("world_size", 1)
         rank = self.config.get("distributed", {}).get("rank", 0)
-        
+
         if world_size > 1:
             slurm_node = os.environ.get("SLURM_NODEID", "0")
-            base_output_path = os.path.join(self.results_dir, f"results_{self.start_time}_node{slurm_node}_rank{rank}")
+            base_output_path = os.path.join(
+                self.results_dir, f"results_{self.start_time}_node{slurm_node}_rank{rank}"
+            )
         else:
             base_output_path = os.path.join(self.results_dir, f"results_{self.start_time}")
-            
+
         exported_files = ResultsExporterFactory.export_results(
             final_results, base_output_path, export_formats, self.config
         )
@@ -365,10 +376,10 @@ class TwinkleEvalRunner:
             else:
                 try:
                     from .hf_uploader import upload_results
-    
+
                     # Model name from config
                     model_name = self.config.get("model", {}).get("name", "unknown_model")
-    
+
                     upload_results(
                         repo_id=hf_repo_id,
                         variant=hf_variant,
@@ -680,11 +691,12 @@ def main() -> int:
         except Exception as e:
             print(f"❌ 轉換失敗: {e}")
             return 1
-            
+
     # 後處理結果命令（合併或直接上傳）
     if args.finalize_results:
         try:
             from .finalize import finalize_results
+
             return finalize_results(args.finalize_results, args.hf_repo_id, args.hf_variant)
         except Exception as e:
             print(f"❌ 結果後處理失敗: {e}")
