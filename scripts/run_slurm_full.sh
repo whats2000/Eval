@@ -45,15 +45,32 @@ MAX_MODEL_LEN=${8:-32768}
 #               例如："default"、"high", "low" 等表示不同評測條件
 HF_VARIANT=${9:-"default"}
 
-# 8. 工作目錄 (Working Directory): 預設為此腳本的上一層 (專案根目錄)。
-#    若有特殊需求，可透過執行前設定環境變數 WORK_DIR 覆蓋。
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${WORK_DIR:-$(dirname "$SCRIPT_DIR")}"
+# 8. 工作目錄 (Working Directory): 專案程式碼的根目錄絕對路徑。
+#    留空則自動偵測，如自動偵測失敗再手動填寫。
+WORK_DIR=""                                    # <= 選填，留空自動偵測
 
 # ------------------------------------------------------------------------------
 # ⚠️ 注意 (Notice):
 # 其他如資料集設定 (dataset_paths)、System Prompt 或是較少更動的評測選項，
 # 仍需要直接去修改 yaml 配置檔 (configs/config_slurm_full.yaml)。
+# ==============================================================================
+
+# ==============================================================================
+# 自動偵測 WORK_DIR（請勿修改）
+# ------------------------------------------------------------------------------
+if [ -z "${WORK_DIR}" ]; then
+    if [ -n "${SLURM_SUBMIT_DIR:-}" ]; then
+        # SLURM 環境：使用 sbatch 命令下達時由 SLURM 記錄的路徑
+        WORK_DIR="${SLURM_SUBMIT_DIR}"
+    elif [ -n "${BASH_SOURCE[0]:-}" ] && [ "${BASH_SOURCE[0]}" != "$0" -o -f "${BASH_SOURCE[0]}" ]; then
+        # 本機執行：從腳本本身位置向上一層推導
+        WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        WORK_DIR="$(dirname "${WORK_DIR}")"
+    else
+        echo "ERROR: 無法自動偵測 WORK_DIR，請在上方使用者定義區填寫專案絕對路徑。" >&2
+        exit 1
+    fi
+fi
 # ==============================================================================
 
 mkdir -p logs results
@@ -267,4 +284,3 @@ if [ -n "$LATEST_TIMESTAMP" ]; then
 else
     echo "⚠️ 找不到任何可供處理的評測結果，請確認各節點評測是否已完成並寫入 results/ 目錄。"
 fi
- 
