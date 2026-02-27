@@ -9,15 +9,40 @@ import numpy as np
 from .results_exporters import ResultsExporterFactory
 
 
-def merge_distributed_results(timestamp: str, hf_repo_id: Optional[str] = None, hf_variant: Optional[str] = "default") -> int:
-    """合併平行運算產生的碎片並重新計算評測指標，最後刪除碎片"""
+def finalize_results(timestamp: str, hf_repo_id: Optional[str] = None, hf_variant: Optional[str] = "default") -> int:
+    """合併平行運算產生的碎片並重新計算評測指標，最後刪除碎片。
+    若無碎片但存在單節點最終結果，則直接執行上傳。
+    """
 
     results_dir = "results"
     json_shards = sorted(glob.glob(os.path.join(results_dir, f"results_{timestamp}_node*_rank*.json")))
 
     if not json_shards:
-        print(f"❌ 找不到時間戳記為 {timestamp} 的評測碎片。")
-        return 1
+        # 單節點執行：直接上傳已存在的最終結果，無須合併
+        single_node_result = os.path.join(results_dir, f"results_{timestamp}.json")
+        if not os.path.exists(single_node_result):
+            print(f"找不到時間戳記為 {timestamp} 的評測碎片或最終結果。")
+            return 1
+
+        print(f"未發現分散式碎片，以單節點模式直接上傳 {single_node_result}。")
+        if hf_repo_id:
+            try:
+                from .hf_uploader import upload_results
+                with open(single_node_result, "r", encoding="utf-8") as _f:
+                    _result = json.load(_f)
+                model_name = _result.get("config", {}).get("model", {}).get("name", "unknown_model")
+                upload_results(
+                    repo_id=hf_repo_id,
+                    variant=hf_variant,
+                    model_name=model_name,
+                    results_dir=results_dir,
+                    timestamp=timestamp,
+                )
+                print("上傳完成。")
+            except Exception as e:
+                print(f"上傳至 Hugging Face 失敗: {e}")
+                return 1
+        return 0
 
     print(f"找到 {len(json_shards)} 個 JSON 配置碎片。開始合併與統整數據...")
 
@@ -194,3 +219,7 @@ def _acc_from_shards(json_shards: list[str], ds_name: str, file_path: str, run_i
                 if run_idx < len(run_accs):
                     accs.append(run_accs[run_idx])
     return float(np.mean(accs)) if accs else 0.0
+
+
+# 向後相容別名
+merge_distributed_results = finalize_results

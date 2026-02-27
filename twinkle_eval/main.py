@@ -528,9 +528,12 @@ HuggingFace 資料集下載:
     )
 
     parser.add_argument(
-        "--merge-results",
+        "--finalize-results",
         metavar="TIMESTAMP",
-        help="合併多個分散式節點產生的結果碎片、重新計算準確率、上傳至 HuggingFace (需搭配 --hf-repo-id) 並清理碎片",
+        help=(
+            "後處理指定時間戳記的評測結果：若找到分散式碎片則自動合併後上傳，"
+            "若為單節點最終結果則直接上傳 (可搭配 --hf-repo-id)"
+        ),
     )
 
     # Benchmark 相關命令
@@ -678,13 +681,13 @@ def main() -> int:
             print(f"❌ 轉換失敗: {e}")
             return 1
             
-    # 合併分散式結果命令
-    if args.merge_results:
+    # 後處理結果命令（合併或直接上傳）
+    if args.finalize_results:
         try:
-            from .merge import merge_distributed_results
-            return merge_distributed_results(args.merge_results, args.hf_repo_id, args.hf_variant)
+            from .finalize import finalize_results
+            return finalize_results(args.finalize_results, args.hf_repo_id, args.hf_variant)
         except Exception as e:
-            print(f"❌ 分散式結果合併失敗: {e}")
+            print(f"❌ 結果後處理失敗: {e}")
             return 1
 
     # Benchmark 命令

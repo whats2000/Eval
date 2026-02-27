@@ -247,18 +247,22 @@ rm -f $CONFIG_RUN $WRAPPER_SCRIPT
 echo "等待檔案系統同步..."
 sleep 5
 
-# 自動抓取最新產生的時間戳記
-LATEST_TIMESTAMP=$({ ls -1qr results/results_*_node*_rank*.json 2>/dev/null | head -n 1 | grep -oP '\d{8}_\d{4}'; } || true)
+# 同時搜尋分散式碎片與單節點結果，取最新時間戳記
+LATEST_TIMESTAMP=$(
+    { ls -1qr results/results_????????_????.json 2>/dev/null || true; } \
+    | head -n 1 | grep -oP '\d{8}_\d{4}' || true
+)
 
 if [ -n "$LATEST_TIMESTAMP" ]; then
     echo "=========================================="
-    echo "發現評測碎片 (Timestamp: $LATEST_TIMESTAMP)，開始合併與產生最終報告..."
+    echo "取得評測結果 (Timestamp: $LATEST_TIMESTAMP)，開始合併與上傳..."
 
     if [ -n "$HF_UPLOAD_REPO" ] && [ "$HF_UPLOAD_REPO" != "your-org/eval-logs" ]; then
-        uv run twinkle-eval --merge-results "${LATEST_TIMESTAMP}" --hf-repo-id "${HF_UPLOAD_REPO}" --hf-variant "${HF_VARIANT}"
+        uv run twinkle-eval --finalize-results "${LATEST_TIMESTAMP}" --hf-repo-id "${HF_UPLOAD_REPO}" --hf-variant "${HF_VARIANT}"
     else
-        uv run twinkle-eval --merge-results "${LATEST_TIMESTAMP}"
+        uv run twinkle-eval --finalize-results "${LATEST_TIMESTAMP}"
     fi
 else
-    echo "⚠️ 找不到可供合併的評測碎片，請確認各節點評測是否已完成並寫入 results/ 目錄。"
+    echo "⚠️ 找不到任何可供處理的評測結果，請確認各節點評測是否已完成並寫入 results/ 目錄。"
 fi
+ 
