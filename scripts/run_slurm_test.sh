@@ -44,8 +44,10 @@ MAX_MODEL_LEN=${8:-32768}
 #               例如："test_calibration"、"high-temperature"、"baseline" 等。
 HF_VARIANT=${9:-"test_calibration"}
 
-# 7. 工作目錄 (Working Directory): 請設定為您存放此專案程式碼的絕對路徑。
-WORK_DIR="/home/whats2000/workspace/Eval"      # <= 請改成你的工作目錄
+# 7. 工作目錄 (Working Directory): 預設為此腳本的上一層 (專案根目錄)。
+#    若有特殊需求，可透過執行前設定環境變數 WORK_DIR 覆蓋。
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORK_DIR="${WORK_DIR:-$(dirname "$SCRIPT_DIR")}"
 
 # ------------------------------------------------------------------------------
 # ⚠️ 注意 (Notice):
