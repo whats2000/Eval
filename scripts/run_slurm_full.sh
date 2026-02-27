@@ -283,10 +283,10 @@ if [ -n "${RUN_TIMESTAMP:-}" ]; then
     # 同時支援兩種檔案格式：
     #   多 rank： results_{ts}_node*_rank*.json  (world_size > 1)
     #   單 rank： results_{ts}.json              (world_size = 1)
-    ACTUAL_SHARDS=$(ls -1 "results/results_${RUN_TIMESTAMP}_node"*"_rank"*".json" 2>/dev/null | wc -l)
+    ACTUAL_SHARDS=$(ls -1 "results/results_${RUN_TIMESTAMP}_node"*"_rank"*".json" 2>/dev/null | wc -l || true)
     if [ "${ACTUAL_SHARDS}" -eq 0 ]; then
-        # 回落檢查单節點無後綴格式
-        if ls "results/results_${RUN_TIMESTAMP}.json" 2>/dev/null; then
+        # 回落檢查單節點無後綴格式
+        if [ -f "results/results_${RUN_TIMESTAMP}.json" ]; then
             ACTUAL_SHARDS=1
         fi
     fi
