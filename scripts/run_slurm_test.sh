@@ -180,7 +180,7 @@ for i in $(seq 0 $((INSTANCES_PER_NODE - 1))); do
             --trust-remote-code > "logs/vllm_test_rank${i}.log" 2>&1 &
         VLLM_PID=$!
         
-        timeout 600 bash -c "until curl -s ${BASE_URL}/models > /dev/null; do sleep 5; done" || {
+        timeout 3600 bash -c "until curl -s ${BASE_URL}/models > /dev/null; do sleep 5; done" || {
             echo "[Rank $i] vLLM 伺服器啟動失敗。"
             kill $VLLM_PID
             exit 1
