@@ -215,6 +215,10 @@ for i in $(seq 0 $((INSTANCES_PER_NODE - 1))); do
         export CUDA_VISIBLE_DEVICES=$GPU_LIST
         export RANK=$GLOBAL_RANK
         export WORLD_SIZE=$WORLD_SIZE
+        export TORCHINDUCTOR_CACHE_DIR="/tmp/inductor_${GLOBAL_RANK}"
+        export TRITON_CACHE_DIR="/tmp/triton_${GLOBAL_RANK}"
+        export VLLM_CACHE_ROOT="/tmp/vllm_cache_${GLOBAL_RANK}"
+        export XDG_CACHE_HOME="/tmp/xdg_cache_${GLOBAL_RANK}"
         
         echo "[節點 $SLURM_NODEID | Rank $GLOBAL_RANK] 啟動 vLLM (GPUs: $GPU_LIST, Port: $PORT)..."
         "${VLLM_VENV_PATH}/bin/python" -m vllm.entrypoints.openai.api_server \
