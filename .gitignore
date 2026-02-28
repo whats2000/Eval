@@ -139,3 +139,4 @@ configs/*.yaml
 # scripts directory
 scripts/*.sh
 !scripts/run_slurm_*.sh
+!scripts/setup_vllm_venv.sh
